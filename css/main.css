@@ -1,0 +1,61 @@
+body {
+  margin: auto;
+  padding: 0;
+  font-family: Georgia;
+}
+#board {
+  margin: 0 auto;
+  padding: 5px;
+  width: 417px;
+}
+#header {
+	  padding-left: 71px;
+}
+#querybox {
+	text-align: center;
+}
+#response {
+	overflow: auto;
+	padding-top: 5px;
+}
+blockquote {
+	margin:0;
+	padding-left: 3px;
+}
+.query {
+	width: 217px;
+}
+#footer {
+  margin-top: 7px;
+  background-color: #eee;
+  padding: 16px 0 17px;
+  text-align: center;
+}
+.unl {
+	text-decoration: underline;
+}
+.center {
+	text-align: center;
+}
+.hilite {
+  background-color: #FFFF99;
+}
+
+
+em {
+	color: #ccc;
+}
+a {
+	color: #000066;
+}
+
+
+a.module17 {
+  background: transparent url('../images/module17-module-17-m17-pad.png') no-repeat scroll 0 0;
+  border-bottom: 1px solid #eee;
+  display: inline-block;
+  height: 50px;
+  overflow: hidden;
+  text-indent: -999em;
+  width: 190px;
+}

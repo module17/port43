@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /
+
+# force www
+RewriteCond %{HTTP_HOST} ^port43\.net [NC]
+RewriteRule ^(.*)$ http://www.port43.net/$1 [R=301,L]
+
+# prevent 404 for now in the future we will implement a url friendly request mechanism instead of value pair get parameters
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule .(/)?$ /index.php
