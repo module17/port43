@@ -7,6 +7,19 @@
 
 class Port43
 {
+    private $dbh;
+
+    public function __construct()
+    {
+        try {
+            $this->dbh = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8", DB_USER, DB_PASS);
+        } catch (PDOException $e) {
+            // Display a user friendly error
+            echo "An error occurred. Please try again later. ";
+            // TODO: Add some error logging and better handling
+            die($e->getMessage());
+        }
+    }
 
     public function insertStat($query, $cache_id = '', $req_type = 'WHOIS', $referrer = '')
     {
@@ -36,37 +49,23 @@ class Port43
                                                       request_type) VALUES (NULL,NOW(),"%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s")',
             $date, $visitor_ip, $hostname, $user_agent, $referer, $char, $lang, $short_url, base64_encode($cache_id), $visitor_country, $req_type);
 
-        DB::query($sql);
-
-        if (DB::error()) {
-            die(DB::error());
-        }
+        $this->dbh->query($sql);
     }
 
     public function getCountryByIP($ip)
     {
         $sql = sprintf('SELECT country_code FROM ip_group_country WHERE ip_start <= INET_ATON("%s") ORDER BY ip_start DESC LIMIT 1', $ip);
-        $result = DB::get_row($sql);
+        $result = $this->dbh->query($sql)->fetch();
 
-        if (DB::error()) {
-            die(DB::error());
-        }
-
-        return ($result->country_code != '') ? $result->country_code : '';
+        return ($result['country_code'] != '') ? $result['country_code'] : '';
     }
 
-    function getTLD($domain)
+    function getTLD($tld)
     {
-        $extracted_tld = $domain;
-        $sql = sprintf('SELECT url_page_title FROM tld_support_list WHERE tld = "%s"', $extracted_tld);
-        $result = DB::get_row($sql);
+        $sql = sprintf('SELECT tld FROM tld_support_list WHERE tld = "%s" LIMIT 1', $tld);
+        $result = $this->dbh->query($sql);
 
-        // error handling should be nicer
-        if (DB::error()) {
-            die(DB::error());
-        }
-
-        return ($result->url_page_title != '') ? $result->url_page_title : '';
+        return $result->rowCount();
     }
 
     function is_hostname($domain_name)
