@@ -10,14 +10,12 @@ require_once('inc/config.inc.php');
 require_once('inc/db.inc.php');
 
 // require libraries and classes
-require_once('classes/db_func.class.php');
+require_once('classes/Port43.php');
 require_once('lib/Cache_Lite-1.7.9/Lite.php');
 require_once('lib/whois/whois.main.php');
 require_once('lib/whois/whois.utils.php');
-require_once('inc/functions.port43.inc.php');
 
-// create db object
-$dbs = new db_func();
+$app = new Port43();
 
 // set initial referer session variable to store where user initially came from
 if (!isset($_SESSION['referer'])) {
@@ -26,10 +24,10 @@ if (!isset($_SESSION['referer'])) {
 
 if (isset($_GET['query'])) {
     // some sanitization should occur here, check for valid domain name or ip address
-    $query = stripProtocols(fixQuery(trim($_GET['query'])));
+    $query = $app->stripProtocols($app->fixQuery(trim($_GET['query'])));
 
-    if (is_ipaddress($query) || is_hostname($query)) {
-        $output = detectOutput();
+    if ($app->is_ipaddress($query) || $app->is_hostname($query)) {
+        $output = $app->detectOutput();
 
         // create whois object
         $whois = new Whois();
@@ -55,14 +53,14 @@ if (isset($_GET['query'])) {
         // Create a Cache_Lite object
         $Cache_Lite = new Cache_Lite($options);
 
-        // Test if thereis a valide cache for this id
+        // Test if there is a valid cache for this id
         if ($data = $Cache_Lite->get($cache_id)) {
             // Cache hit !
             // get cache age, experimental
             //$mod = $Cache_List->lastModified;
 
             // record the cache hit to the log database table
-            $dbs->insertStat($query, '', 'CACHE', $_SESSION['referer']);
+            $app->insertStat($query, '', 'CACHE', $_SESSION['referer']);
 
             $mod = '<!--17' . date('Ymdhms') . '-17-->';
             $output_data = $data . "\n" . $mod . "\n";
@@ -72,10 +70,10 @@ if (isset($_GET['query'])) {
             // No valid cache found so get the whois results
             $result = $whois->Lookup($query);
             // generate nice html or text output
-            $output_data = generateOutput($output, $whois, $result);
+            $output_data = $app->generateOutput($output, $whois, $result);
 
             // record the hit to the log database table
-            $dbs->insertStat($query, $cache_id, 'WHOIS', $_SESSION['referer']);
+            $app->insertStat($query, $cache_id, 'WHOIS', $_SESSION['referer']);
 
             // save the data to cache
             $Cache_Lite->save($output_data);
@@ -85,11 +83,11 @@ if (isset($_GET['query'])) {
         $error_msg = 'Query terms are ambiguous';
 
         // record error query to database as well to see what users are doing and make app better
-        $dbs->insertStat($query, '', 'ERROR', $_SESSION['referer']);
+        $app->insertStat($query, '', 'ERROR', $_SESSION['referer']);
     }
 
     // sanitize query string for usage in input field
-    $clean_query = stripslashes(fixQuery(trim($_GET['query'])));
+    $clean_query = stripslashes($app->fixQuery(trim($_GET['query'])));
 }
 ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -97,8 +95,8 @@ if (isset($_GET['query'])) {
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <title><?= SITE_TITLE; ?></title>
-    <link href="<?= SITE_ROOT_PATH; ?>favicon.ico" rel="shortcut icon" type="image/x-icon"/>
-    <link href="<?= SITE_ROOT_PATH; ?>css/main.css" rel="stylesheet" type="text/css"/>
+    <link href="favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+    <link href="css/main.css" rel="stylesheet" type="text/css"/>
 </head>
 
 <body>
@@ -109,17 +107,12 @@ if (isset($_GET['query'])) {
         ?>
     </div>
     <div id="querybox">
-        <form id="whois" method="get" action="<?= SITE_ROOT_PATH; ?>">
+        <form id="whois" method="get" action="<?=$_SERVER['PHP_SELF'];?>" novalidate>
             <p>Enter any <span class="uln">domain</span> name or <strong>IP</strong> address
                 <br/><br/>
                 <input name="query" class="query" value="<?php $o = (isset($_GET['query'])) ? $clean_query : '';
-                echo $o; ?>"></input>
-                &nbsp;<input type="submit" value="Whois &raquo;"></input>
-                <!--<br/>
-<input type="radio" name="output" value="text" checked="<?php $o = (isset($_GET['output']) && $_GET['output'] == 'text') ? 'checked' : '';
-                echo $o; ?>"></input> Text
-&nbsp;<input type="radio" name="output" value="nice" checked="<?php $o = (isset($_GET['output']) && $_GET['output'] == 'nice') ? 'checked' : '';
-                echo $o; ?>"></input> HTML-->
+                echo $o; ?>" type="url" autofocus>
+                &nbsp;<input type="submit" value="Whois &raquo;">
             </p>
         </form>
     </div>
@@ -128,11 +121,11 @@ if (isset($_GET['query'])) {
         // make links
         define('MAKE_LINKS', true);
         if (MAKE_LINKS) {
-            $out = outputResults($output_data, $query);
+            $out = $app->outputResults($output_data, $query);
             //$url_params = parse_url($_SERVER['PHP_SELF']);
-            echo makeLinks($result, $out, true) . "\n";
+            echo $app->makeLinks($result, $out, true) . "\n";
         } else {
-            $out = outputResults($output_data, $query) . "\n";
+            $out = $app->outputResults($output_data, $query) . "\n";
             echo $out;
         }
     } elseif (isset($error_msg)) {
