@@ -10,7 +10,7 @@ require_once('inc/config.inc.php');
 
 // require libraries and classes
 require_once('classes/Port43.php');
-require_once('lib/Cache_Lite-1.7.9/Lite.php');
+require_once('lib/Cache_Lite/Lite.php');
 require_once('lib/whois/whois.main.php');
 require_once('lib/whois/whois.utils.php');
 
