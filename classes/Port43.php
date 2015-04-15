@@ -8,16 +8,87 @@
 class Port43
 {
     private $dbh;
+    public $raw_result;
+    public $clean_query;
+    public $query;
+    public $output_data;
 
     public function __construct()
     {
         try {
             $this->dbh = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8", DB_USER, DB_PASS);
+            session_start();
+            // set initial referer session variable to store where user initially came from
+            if (!isset($_SESSION['referer'])) {
+                $_SESSION['referer'] = $_SERVER['HTTP_REFERER'];
+            }
         } catch (PDOException $e) {
             // Display a user friendly error
             echo "An error occurred. Please try again later. ";
             // TODO: Add some error logging and better handling
             die($e->getMessage());
+        }
+    }
+
+    public function initApp() {
+        if (isset($_GET['query'])) {
+            // some sanitization should occur here, check for valid domain name or ip address
+            $this->query = $this->stripProtocols($this->fixQuery(trim($_GET['query'])));
+
+            if ($this->is_ipaddress($this->query) || $this->is_hostname($this->query)) {
+                $output = $this->detectOutput();
+
+                // create whois object
+                //use phpWhois\Whois;
+                $whois = new phpWhois\Whois();
+                $whois->non_icann = true;
+
+                // Set a id for this cache
+                $cache_id = base64_encode($this->query);
+                // Set a few options
+                $options = array(
+                    'cacheDir' => 'tmp/',
+                    'lifeTime' => 1700
+                );
+                // Create a Cache_Lite object
+                $Cache_Lite = new Cache_Lite($options);
+
+                // Test if there is a valid cache for this id
+                if ($data = $Cache_Lite->get($cache_id)) {
+                    // Cache hit !
+                    // get cache age, experimental
+                    //$mod = $Cache_List->lastModified;
+
+                    // record the cache hit to the log database table
+                    $this->insertStat($this->query, '', 'CACHE', $_SESSION['referer']);
+
+                    $mod = '<!--17' . date('Ymdhms') . '-17-->';
+                    $this->raw_result = $data;
+                    $this->output_data = $data . "\n" . $mod . "\n";
+                } else {
+                    // process the query further to ensure only top level domain is used
+                    // prevent usage of subdomains as they have same whois result and return error when supplied
+                    // No valid cache found so get the whois results
+                    $this->raw_result = $whois->Lookup($this->query);
+                    // generate nice html or text output
+                    $this->output_data = $this->generateOutput($output, $whois, $this->raw_result);
+
+                    // record the hit to the log database table
+                    $this->insertStat($this->query, $cache_id, 'WHOIS', $_SESSION['referer']);
+
+                    // save the data to cache
+                    $Cache_Lite->save($this->output_data);
+                }
+            } else {
+                // send an error
+                $this->error_msg = 'Query terms are ambiguous';
+
+                // record error query to database as well to see what users are doing and make app better
+                $this->insertStat($this->query, '', 'ERROR', $_SESSION['referer']);
+            }
+
+            // sanitize query string for usage in input field
+            $this->clean_query = htmlspecialchars(stripslashes($this->fixQuery(trim($_GET['query']))));
         }
     }
 
@@ -28,7 +99,7 @@ class Port43
         $hostname = mysql_real_escape_string(gethostbyaddr($visitor_ip));
         $user_agent = mysql_real_escape_string($_SERVER['HTTP_USER_AGENT']);
         $referer = mysql_real_escape_string($referrer);
-        $char = mysql_real_escape_string($_SERVER['HTTP_ACCEPT_CHARSET']);
+        $char = mysql_real_escape_string(isset($_SERVER['HTTP_ACCEPT_CHARSET']) ? $_SERVER['HTTP_ACCEPT_CHARSET'] : '');
         $lang = mysql_real_escape_string($_SERVER['HTTP_ACCEPT_LANGUAGE']);
         $date = date('Y-m-d');
         $visitor_country = $this->getCountryByIP($visitor_ip);
@@ -106,14 +177,12 @@ class Port43
         $heading = ($query != '') ? $this->htmlCenter("<strong>Results for $query</strong>") . "<br/>" : "";
 
         $out = <<<DATA
-<!--results-->
 <div id="response">
 $heading
 <blockquote>
 $data
 </blockquote>
 </div>
-<!--/results-->
 DATA;
 
         return $this->formatOutput($this->cleanOutput($out));
@@ -135,7 +204,7 @@ DATA;
 // when a user pastes a URL with http it causes an error
     function stripProtocols($str)
     {
-        $protocols = array('http', 'ftp');
+        $protocols = array('http', 'ftp', 'https');
 
         // clean trailing slash
         $str = rtrim($str, "/");
@@ -213,11 +282,11 @@ DATA;
 
         //$out = strip_tags($out);
         $out = preg_replace($email_regex, '<a href="mailto:$0">$0</a>', $out);
-        $out = preg_replace_callback($html_regex, 'href_replace', $out);
+        $out = preg_replace($html_regex, '<a href="?query=$0" target="new">$0</a>', $out);
 
         if ($linkself) {
 
-            $link = '/?query=';
+            $link = '?query=';
             $out = preg_replace($ip_regex, '<a href="' . $link . '$0">$0</a>', $out);
 
             if (isset($result['regrinfo']['domain']['nserver'])) {
