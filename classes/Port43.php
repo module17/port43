@@ -192,32 +192,24 @@ DATA;
     {
         // utf-8 perhaps
         $out = utf8_encode($out);
-
-        // replace server IP address with cool name
-        $out = str_replace('192.168.0.1', 'port43.net', $out);
-
-        // detect dates and highlight thme
+        // detect dates and highlight time
         $out = $this->findDate($out);
         return $out;
     }
 
-// when a user pastes a URL with http it causes an error
     function stripProtocols($str)
     {
         $protocols = array('http', 'ftp', 'https');
-
-        // clean trailing slash
         $str = rtrim($str, "/");
 
-        foreach ($protocols as $prot) {
+        foreach ($protocols as $protocol) {
             $suffix = '://';
-            $str = str_replace($prot . $suffix, '', $str);
+            $str = str_replace($protocol . $suffix, '', $str);
         }
         // also strip common subdomains
         return $this->stripSubdomains($str);
     }
 
-    // when a user pastes a URL with http it causes an error
     function stripSubdomains($str)
     {
         $subdomains = array('www', 'ns1', 'ns2', 'ns3', 'news');
@@ -226,7 +218,6 @@ DATA;
             $suffix = '.';
             $str = str_replace($prot . $suffix, '', $str);
         }
-        // also strip common subdomains
         return $str;
     }
 
@@ -338,13 +329,13 @@ DATA;
                 if ($whois->Query['status'] < 0) {
                     $winfo = implode($whois->Query['errstr'], "\n<br/><br/>");
                 } else {
-                    $utils = new utils;
+                    $utils = new phpWhois\Utils;
                     $winfo = $utils->showObject($result);
                 }
                 break;
             case 'nice':
                 if (!empty($result['rawdata'])) {
-                    $utils = new utils;
+                    $utils = new phpWhois\Utils;
                     $winfo = $utils->showHTML($result);
                 } else {
                     if (isset($whois->Query['errstr'])) {
