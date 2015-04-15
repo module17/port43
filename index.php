@@ -30,14 +30,7 @@ $app->initApp();
             &nbsp;<input type="submit" value="Whois &raquo;">
         </form>
     </div>
-    <?php
-    if (isset($app->output_data)) {
-        $out = $app->outputResults($app->output_data, $app->query);
-        echo $app->makeLinks($app->raw_result, $out, true) . "\n";
-    } elseif (isset($app->error_msg)) {
-        echo "<div class=\"center\">" . $app->error_msg . "</div>";
-    }
-    ?>
+    <?=$app->outputBody();?>
 </div>
 <div id="footer">
     <a href="http://www.module17.com" class="module17" rel="external" title="Module 17 | Web development Toronto">Module

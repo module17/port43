@@ -362,4 +362,13 @@ DATA;
         }
         return $winfo;
     }
+
+    public function outputBody() {
+        if (isset($this->output_data)) {
+            $out = $this->outputResults($this->output_data, $this->query);
+            echo $this->makeLinks($this->raw_result, $out, true) . "\n";
+        } elseif (isset($this->error_msg)) {
+            echo "<div class=\"center\">" . $this->error_msg . "</div>";
+        }
+    }
 }
